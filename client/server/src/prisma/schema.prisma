@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+  // Emit client to workspace root so @prisma/client can forward correctly
+  output   = "../../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ItemType {
+  PARAGRAPH_QUESTION
+  IMPORTANT_WORD
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("user")
+  createdAt    DateTime @default(now())
+  progress     UserProgress[]
+}
+
+model Paragraph {
+  id             String            @id @default(uuid())
+  title          String?
+  theme          String?
+  topic          String?
+  level          String?
+  content        String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  questions      ParagraphQuestion[]
+  importantWords ImportantWord[]
+}
+
+model ParagraphQuestion {
+  id          String    @id @default(uuid())
+  paragraphId String
+  question    String
+  answer      String
+  choices     Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  paragraph   Paragraph @relation(fields: [paragraphId], references: [id], onDelete: Cascade)
+  progress    UserProgress[] @relation("ParagraphQuestionProgress")
+
+  @@index([paragraphId])
+}
+
+model ImportantWord {
+  id            String    @id @default(uuid())
+  paragraphId   String
+  term          String
+  meaning       String
+  usageSentence String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  paragraph     Paragraph @relation(fields: [paragraphId], references: [id], onDelete: Cascade)
+  progress      UserProgress[] @relation("ImportantWordProgress")
+
+  @@index([paragraphId])
+}
+
+model UserProgress {
+  id                  String             @id @default(uuid())
+  userId              String
+  itemType            ItemType
+  paragraphQuestionId String?
+  importantWordId     String?
+  correctCount        Int                @default(0)
+  wrongCount          Int                @default(0)
+  successStreak       Int                @default(0)
+  knowledgeScore      Float              @default(0)
+  lastReviewed        DateTime           @default(now())
+  nextReview          DateTime           @default(now())
+  user                User               @relation(fields: [userId], references: [id])
+  paragraphQuestion   ParagraphQuestion? @relation("ParagraphQuestionProgress", fields: [paragraphQuestionId], references: [id], onDelete: Cascade)
+  importantWord       ImportantWord?     @relation("ImportantWordProgress", fields: [importantWordId], references: [id], onDelete: Cascade)
+
+  @@index([userId, itemType])
+  @@index([userId, paragraphQuestionId])
+  @@index([userId, importantWordId])
+}
