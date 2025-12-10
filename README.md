@@ -1,28 +1,33 @@
 # German Reading Exercises
 
-Full-stack German reading trainer with paragraph-level exercises, comprehension questions, vocabulary cards, translation helper, progress tracking, and admin-only OpenAI generation. UI is React + Vite + Tailwind; the API is Express + GraphQL Yoga with Prisma (SQLite).
+Full-stack German reading trainer with AI-backed paragraph generation, comprehension checks, word lookups, and progress tracking. The UI runs on React + Vite + Tailwind; the API is Express + GraphQL Yoga + Prisma (SQLite).
 
 ## Features
-- Reading mode with leveled paragraphs, MCQs, and important words per text.
-- JWT auth with admin role for AI-powered content generation and database seeding.
-- Progress tracking per question/word plus simple spaced review scheduling.
-- Translation helper backed by DeepL (auth required) that saves a personal dictionary in localStorage.
-- GraphQL API for querying items and REST helpers for auth, submissions, and translation.
+- Paragraph-level reading practice with MCQs, important words, and spaced-review style progress for questions and vocab.
+- Word lookup: highlight text and ask the AI (OpenAI) for a quick explanation/translation; recent lookups are saved as flip cards in a local dictionary.
+- JWT auth with admin role for AI-powered content generation and seeding.
+- Translation helper (DeepL) plus personal dictionary persisted in localStorage.
+- GraphQL API for reading content and REST helpers for auth, submissions, translation, and OpenAI-driven generation.
 
 ## Tech stack
 - Frontend: React 19, Vite, Tailwind CSS 4, React Router.
 - Backend: Express on port 3000 with GraphQL Yoga at `/api/graphql` plus REST endpoints under `/api/*`.
 - Data: Prisma with SQLite (no external DB needed).
-- AI: OpenAI Chat Completions with JSON schema enforcement for generated content.
+- AI: OpenAI Chat Completions for paragraph/vocab generation and word lookups; optional DeepL for translations.
+
+## Project layout
+- `client/` – main project root (run commands here).
+- `client/src/` – React UI, hooks, helpers, auth client, and UI state.
+- `client/server/` – Express + GraphQL Yoga API, Prisma schema, OpenAI/DeepL services, and seeds.
+- `client/api/` and `client/scripts/` – legacy serverless helpers and seed utilities.
 
 ## Quick start
-Prereqs: Node.js 20+, npm. SQLite ships with Prisma, so nothing extra to install.
+Prereqs: Node.js 20+, npm. All commands below run from `client/`.
 
-1) Copy env files and fill secrets (see variables below):
+1) Copy env vars and fill secrets (see list below):
 ```bash
+cd client
 cp .env.example .env
-# if you prefer env files scoped to the server package:
-cp server/.env.example server/.env
 ```
 2) Install dependencies (runs Prisma client generation + server build automatically):
 ```bash
@@ -34,21 +39,21 @@ npx prisma db push --schema ./server/src/prisma/schema.prisma
 # optional sample data + admin user admin@example.com / 123456
 npm --prefix server run prisma:seed
 ```
-4) Run the API (default http://localhost:3000):
+4) Run the API (http://localhost:3000):
 ```bash
 npm run serve:api          # compiled server
-# or for ts-node hot reload
+# or ts-node hot reload
 npm run serve:api:dev
 ```
-5) In another terminal, run the UI (http://localhost:8080 with /api proxy to :3000):
+5) In another terminal, run the UI (http://localhost:8080 proxied to the API):
 ```bash
 npm run dev
 ```
 
 ## Environment variables
-Add these to `.env` (or `server/.env` if running from that folder):
+Add these to `client/.env` (or `client/server/.env` if you prefer scoping there):
 - `DATABASE_URL` (required) – SQLite connection string, e.g. `file:./dev.db` (path is relative to `server/src/prisma/schema.prisma`).
-- `OPENAI_API_KEY` (required for generation/seeders) – OpenAI secret used by `/api/vocab` and `scripts/seedThemes.ts`.
+- `OPENAI_API_KEY` (required for generation/word lookups/seeders) – OpenAI secret used by `/api/vocab`, word lookup, and `scripts/seedThemes.ts`.
 - `JWT_SECRET` (required) – signs auth tokens for `/api/auth/*` and GraphQL context.
 - `AUTH_SECRET` (recommended) – API key that can be used instead of an admin JWT for protected endpoints.
 - `DEEPL_API_KEY` (optional) – enables `/api/translate`; supports free keys ending with `:fx`.
@@ -57,7 +62,7 @@ Add these to `.env` (or `server/.env` if running from that folder):
 - `PORT` (optional) – API port, defaults to `3000`.
 - Legacy helpers: `OPENAI_MAX_REQUESTS_PER_DAY` and `GRAPHQL_ENDPOINT` are read by scripts in `api/`/`scripts/` if you use them.
 
-## NPM scripts (root)
+## NPM scripts (run from `client/`)
 - `npm run dev` – Vite dev server on :8080 with `/api` proxy.
 - `npm run serve:api` / `npm run serve:api:dev` – start the compiled API or ts-node dev server on :3000.
 - `npm run build` – type-check then build the UI.
@@ -71,10 +76,4 @@ Add these to `.env` (or `server/.env` if running from that folder):
 - Auth: `POST /api/auth/signup`, `POST /api/auth/signin` (email/password). Tokens are stored in localStorage.
 - Progress: `POST /api/exercises/submit` and `POST /api/progress/batch` (JWT required).
 - Content generation (admin): `POST /api/vocab` to create new paragraphs via OpenAI.
-- Translation: `POST /api/translate` (JWT required; needs `DEEPL_API_KEY`).
-
-## Project structure
-- `src/` – React UI components, hooks, helpers (includes client auth + GraphQL fetcher).
-- `server/` – Express entrypoint, GraphQL Yoga schema/resolvers, Prisma schema, OpenAI + DeepL services, seeds.
-- `api/` – legacy serverless helpers (not used by the Express server but available for reference).
-- `scripts/` – maintenance utilities and AI seeding helpers.
+- Translation: `POST /api/translate` (JWT required; uses `DEEPL_API_KEY`).
